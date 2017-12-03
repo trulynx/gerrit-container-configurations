@@ -4,8 +4,10 @@ This project details steps used to set up gerrit using various docker tools.
 
 
 ## Table of Contents
-- [Installing LDAP container](#LDAP)
-- [Installing LDAP-ADMIN container](#LDAP-ADMIN)
+1. [Installing an LDAP container](#LDAP)
+- [Installing an LDAP-ADMIN container](#LDAP-ADMIN)
+- [Configuring the LDAP-ADMIN container](#LDAP-ADMIN CONFIGURATION)
+- [Installing a MYSQL container](#MYSQL)
 
 ## LDAP
 ####1.  create the docker container using accenture/adop-ldap
@@ -25,18 +27,37 @@ This project details steps used to set up gerrit using various docker tools.
     a. visit <your-host-ip>:28086 in a browser
     b. login using cn=admin,dc=btech,dc=net
 
-####3. create a posix group (e.g. gerrit-users) so as to be able to create user accounts
+## LDAP-ADMIN CONFIGURATION
+####1. create a posix group (e.g. gerrit-users) so as to be able to create user accounts
     a. click ou=groups
     b. click create a child entry
     c. choose Generic: Posix Group
     d. click Create Object button to proceed
     e. on next screen click Commit to persist the changes
 
-####4. create an admin user for use on gerrit
-    a. click ou=people
-    b. click create a child entry
-    c. choose Generic: User Account
-    d. fill in gid, lastname, login shell, password
-    e. click Create Object button to proceed
-    f. on next screen click Commit to persist the changes
-####N.B. the first login on gerrit becomes the admin user so choose a cn wisely
+####2. create users for use on gerrit
+    a. click "ou=people"
+    b. click "create a child entry"
+    c. choose "Generic: User Account"
+    d. fill in "gid", "lastname", "login shell", "password"
+    e. click "Create Object" button to proceed
+    f. on next screen click "Commit" to persist the changes
+    g. click "Add new attribute" to add "Email" and "displayName" attributes
+####N.B. the first login on gerrit becomes the admin user so choose a "cn" wisely
+
+## MYSQL
+####1. create the docker container using mysql/mysql-server:5.7
+    a. docker run -d --name MYSQL5.7 -p 3306:3306 -v /servers/mysql5.7:/var/lib/mysql mysql/mysql-server:5.7
+
+####2. check its availability
+    a. docker ps -a
+
+####3. get its default password
+    a. docker logs MYSQL5.7 2>&1 | grep GENERATED
+
+####4. enter container and change default password before you can start using it
+    a. docker exec -it MYSQL5.7 mysql -u root -p<GENERATED PASSWORD>
+    b. ALTER USER 'root'@'localhost' IDENTIFIED BY 'secret';
+    c. create USER 'root'@'%' IDENTIFIED BY 'secret';
+
+
