@@ -8,6 +8,7 @@ This project details steps used to set up gerrit using various docker tools.
 - [Installing an LDAP-ADMIN container](#LDAP-ADMIN)
 - [Configuring the LDAP-ADMIN container](#LDAP-ADMIN CONFIGURATION)
 - [Installing a MYSQL container](#MYSQL)
+- [Installing a GERRIT container](#GERRIT)
 
 ## LDAP
 ####1.  create the docker container using accenture/adop-ldap
@@ -21,19 +22,19 @@ This project details steps used to set up gerrit using various docker tools.
 
 ## LDAP-ADMIN
 ####1.  create the docker container using dinkel/phpldapadmin linking it to the LDAP container
-    a. docker run -d --name LDAP-ADMIN -p 28086:80 --link LDAP:ldap -e LDAP_SERVER_HOST=ldap dinkel/phpldapadmin
+    a. docker run -d --name LDAP-ADMIN -p <your-port-number>:80 --link LDAP:ldap -e LDAP_SERVER_HOST=ldap dinkel/phpldapadmin
 
 ####2. test the created ldap-admin container
-    a. visit <your-host-ip>:28086 in a browser
-    b. login using cn=admin,dc=btech,dc=net
+    a. visit <your-host-ip>:<your-port-number> in a browser
+    b. login using "cn=admin,dc=btech,dc=net"
 
 ## LDAP-ADMIN CONFIGURATION
 ####1. create a posix group (e.g. gerrit-users) so as to be able to create user accounts
-    a. click ou=groups
-    b. click create a child entry
-    c. choose Generic: Posix Group
-    d. click Create Object button to proceed
-    e. on next screen click Commit to persist the changes
+    a. click "ou=groups"
+    b. click "create a child entry"
+    c. choose "Generic: Posix Group"
+    d. click "Create Object" button to proceed
+    e. on next screen click "Commit" button to persist the changes
 
 ####2. create users for use on gerrit
     a. click "ou=people"
@@ -57,7 +58,45 @@ This project details steps used to set up gerrit using various docker tools.
 
 ####4. enter container and change default password before you can start using it
     a. docker exec -it MYSQL5.7 mysql -u root -p<GENERATED PASSWORD>
-    b. ALTER USER 'root'@'localhost' IDENTIFIED BY 'secret';
+    b. SET PASSWORD for 'root'@'localhost' IDENTIFIED BY 'secret';
     c. create USER 'root'@'%' IDENTIFIED BY 'secret';
 
+####5. create a database for gerrit
+    a. create database gerritdb;
 
+## GERRIT
+
+####1. create the docker container using: 
+    a. docker run -d --name GERRIT --link MYSQL5.7:db 
+	--link LDAP:ldap \
+	-p <your-port-number>:8080 -p 29418:29418 \
+	-e GITWEB_TYPE=gitiles \
+	-e /servers/gerrit:/var/gerrit/review_site \
+	-e WEBURL: http:<your-host-ip>:<your-port-number> \
+	-e DATABASE_TYPE: mysql \
+	-e DATABASE_HOSTNAME:MYSQL \
+	-e DATABASE_PORT: 3306 \
+	-e DATABASE_DATABASE: gerritdb \
+        -e DATABASE_USERNAME: root \
+        -e DATABASE_PASSWORD: secret \
+        -e AUTH_TYPE: LDAP \
+        -e LDAP_SERVER: ldap://ldap:389 \
+        -e LDAP_ACCOUNTBASE: ou=people,dc=btech,dc=net \
+        -e SMTP_SERVER: <your-smtp-server-address> \
+        -e SMTP_SERVER_PORT: <your-smtp-server-port> \
+        -e SMTP_ENCRYPTION: <your-smtp-server-encryption-type> \
+        -e SMTP_USER: <your-smtp-server-username> \
+        -e SMTP_PASS: <your-smtp-server-password> \
+        -e SMTP_FROM: <your-gerrit-admin><<your-gerrit-admin-email>> \
+        -e USER_NAME: <your-proposed-gerrit-username> \
+        -e USER_EMAIL: <your-gerrit-admin><<your-gerrit-admin-email>> \
+	openfrontier/gerrit:latest   
+
+####2. check its availability
+    a. docker ps -a
+
+####3. test the created gerrit container
+    a. visit <your-host-ip>:<your-port-number> in a browser
+    b. login using an existing "user account cn" created in ldap
+
+####N.B. the first login becomes a gerrit administrator
